@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sandbox_rs::{CommandExecutor, LinuxCommandExecutor};
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 fn main() -> Result<()> {
     let current_dir = env::current_dir()?;
