@@ -1,34 +1,40 @@
 use anyhow::{Context, Result};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 use tempfile::TempDir;
 
 pub trait CommandExecutor {
-    fn execute(&self, command: &[String], files: &[impl AsRef<Path>]) -> Result<()>;
+    fn execute(
+        &self,
+        command: &[String],
+        files: &[impl AsRef<Path>],
+        working_dir: &Path,
+    ) -> Result<()>;
 }
 
-pub struct LinuxCommandExecutor {
-    working_dir: PathBuf,
-}
+pub struct LinuxCommandExecutor;
 
 impl LinuxCommandExecutor {
-    pub fn new(working_dir: impl Into<PathBuf>) -> Self {
-        LinuxCommandExecutor {
-            working_dir: working_dir.into(),
-        }
+    pub fn new() -> Self {
+        LinuxCommandExecutor
     }
 }
 
 impl CommandExecutor for LinuxCommandExecutor {
-    fn execute(&self, command: &[String], files: &[impl AsRef<Path>]) -> Result<()> {
+    fn execute(
+        &self,
+        command: &[String],
+        files: &[impl AsRef<Path>],
+        working_dir: &Path,
+    ) -> Result<()> {
         // Create a temporary directory
         let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
 
         // Copy all specified files to the temporary directory, maintaining directory structure
         for file in files {
             let file_path = file.as_ref();
-            let relative_path = file_path.strip_prefix(&self.working_dir).with_context(|| {
+            let relative_path = file_path.strip_prefix(working_dir).with_context(|| {
                 format!("File {:?} is not within the working directory", file_path)
             })?;
             let dest_path = temp_dir.path().join(relative_path);

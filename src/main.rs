@@ -5,12 +5,12 @@ use std::path::Path;
 
 fn main() -> Result<()> {
     let current_dir = env::current_dir()?;
-    let executor = LinuxCommandExecutor::new(&current_dir);
+    let executor = LinuxCommandExecutor::new();
 
     let this_file = Path::new(std::file!());
     let full_file_path = current_dir.join(this_file);
     let command = vec!["cat".to_string(), this_file.to_str().unwrap().to_string()];
     let files = vec![full_file_path];
 
-    executor.execute(&command, &files)
+    executor.execute(&command, &files, &current_dir)
 }
