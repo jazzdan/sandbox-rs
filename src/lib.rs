@@ -5,10 +5,10 @@ use std::process::Command;
 use tempfile::TempDir;
 
 pub trait CommandExecutor {
-    fn execute(
+    fn execute<P: AsRef<Path>>(
         &self,
         command: &[String],
-        files: &[impl AsRef<Path>],
+        files: &[P],
         working_dir: &Path,
     ) -> Result<()>;
 }
@@ -22,10 +22,10 @@ impl LinuxCommandExecutor {
 }
 
 impl CommandExecutor for LinuxCommandExecutor {
-    fn execute(
+    fn execute<P: AsRef<Path>>(
         &self,
         command: &[String],
-        files: &[impl AsRef<Path>],
+        files: &[P],
         working_dir: &Path,
     ) -> Result<()> {
         // Create a temporary directory
@@ -65,5 +65,46 @@ impl CommandExecutor for LinuxCommandExecutor {
             let error_message = String::from_utf8_lossy(&output.stderr);
             anyhow::bail!("Command failed: {}", error_message)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_linux_command_executor_file_access() {
+        // 1. Create a temporary directory
+        let temp_dir = TempDir::new().unwrap();
+        let temp_path = temp_dir.path();
+
+        // 2. Create a file in that temp directory
+        let file_name = "test_file.txt";
+        let file_content = "This is a test file";
+        let file_path = temp_path.join(file_name);
+        let mut file = File::create(&file_path).unwrap();
+        writeln!(file, "{}", file_content).unwrap();
+
+        // 3. Find the absolute path to that file
+        let absolute_file_path = file_path.canonicalize().unwrap();
+
+        // 4. Run a command in the sandbox that reads that absolute path
+        let executor = LinuxCommandExecutor::new();
+        let command = vec![
+            "cat".to_string(),
+            absolute_file_path.to_str().unwrap().to_string(),
+        ];
+
+        // 5. Expect the command to fail (but it will actually succeed)
+        let result = executor.execute::<std::path::PathBuf>(&command, &[], temp_path);
+
+        // This assertion will fail because the command succeeds
+        assert!(
+            result.is_err(),
+            "Expected command to fail, but it succeeded"
+        );
     }
 }
